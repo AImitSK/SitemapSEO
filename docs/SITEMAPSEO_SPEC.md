@@ -24,7 +24,7 @@ Das Tool soll später auch für andere WordPress-Sites nutzbar sein – Multi-Si
 | Icons | lucide-react |
 | Datenbank | Vercel Postgres (oder Supabase, falls Free-Tier zu klein) |
 | ORM | Drizzle ORM oder Prisma |
-| KI | Anthropic API (Claude Sonnet 4.5) |
+| KI | Google Gemini (`gemini-2.5-flash`) via Vercel AI SDK |
 | Auth (Phase 1) | Single-User via Environment-Variable / NextAuth simple |
 | Forms | react-hook-form + zod |
 | Tabellen | TanStack Table |
@@ -43,7 +43,7 @@ Das Tool soll später auch für andere WordPress-Sites nutzbar sein – Multi-Si
    │
    ├──▶ [WordPress REST API von ibd-wt.de] (Lesen + Schreiben Yoast-Felder)
    │
-   └──▶ [Anthropic API] (KI-Vorschläge für SEO-Titel/Description)
+   └──▶ [Google Gemini API] (KI-Vorschläge für SEO-Titel/Description)
 ```
 
 ---
@@ -101,7 +101,7 @@ Bearbeitete Werte vor dem Push (Mehrere Drafts pro URL möglich für Versionieru
 | meta_description | text | Neue Meta-Description |
 | focus_keyword | text | Neues Focus-Keyword |
 | source | enum | ai_generated, manual_edit, ai_edited |
-| ai_model | text | z.B. "claude-sonnet-4-5" |
+| ai_model | text | z.B. "gemini-2.5-flash" |
 | ai_prompt_used | text | Prompt-Snapshot zur Reproduzierbarkeit |
 | created_by | text | Benutzer (für später) |
 | created_at | timestamp | |
@@ -263,9 +263,11 @@ Spalte/Tab 3 – **KI & Vorschau:**
 
 ## KI-Integration
 
-### Anthropic API
+### Google Gemini via Vercel AI SDK
 
-- Modell: `claude-sonnet-4-5` (gutes Verhältnis Qualität/Kosten)
+- Modell: `gemini-2.5-flash` (gutes Verhältnis Qualität/Kosten/Speed, großzügiges Free-Tier)
+- SDK: `ai` + `@ai-sdk/google` — provider-agnostisch, Wechsel auf Anthropic/OpenAI später ohne Refactoring möglich
+- Strukturierte Outputs: `generateObject()` mit Zod-Schema (vermeidet manuelles JSON-Parsing inkl. Markdown-Codefence-Workaround)
 - Streaming optional (für bessere UX)
 
 ### Prompt-Struktur
@@ -303,7 +305,7 @@ Erstelle {{n}} Vorschläge.
 
 ### Response-Verarbeitung
 
-JSON parsen, Fehler abfangen (KI gibt manchmal Markdown-Codefences mit), Vorschläge in DB als Drafts ablegen mit `source = "ai_generated"`.
+`generateObject()` aus dem Vercel AI SDK liefert direkt typisierte Objekte gegen ein Zod-Schema — kein manuelles JSON-Parsing nötig. Vorschläge in DB als Drafts ablegen mit `source = "ai_generated"` und `ai_model = "gemini-2.5-flash"`.
 
 ---
 
@@ -334,7 +336,7 @@ JSON parsen, Fehler abfangen (KI gibt manchmal Markdown-Codefences mit), Vorschl
 - [ ] Detail-Editor-UI
 - [ ] Live-Zeichenanzahl mit Indikator
 - [ ] Google-SERP-Vorschau-Komponente
-- [ ] Anthropic-API-Integration
+- [ ] Gemini-Integration via Vercel AI SDK
 - [ ] Prompt-Template-Verwaltung pro Site
 - [ ] KI-Vorschläge generieren, in DB als Drafts ablegen
 - [ ] Drafts editieren und speichern
@@ -388,8 +390,8 @@ npm run dev
 DATABASE_URL=postgres://...
 POSTGRES_URL_NON_POOLING=postgres://...
 
-# Anthropic
-ANTHROPIC_API_KEY=sk-ant-...
+# Google Gemini (Vercel AI SDK Default-Variable)
+GOOGLE_GENERATIVE_AI_API_KEY=AIza...
 
 # Verschlüsselung der WP-Application-Passwords
 ENCRYPTION_KEY=<32-byte-base64>
@@ -438,10 +440,11 @@ vercel deploy
 - `_yoast_wpseo_opengraph-description` – OG-Description (Phase 2)
 - `_yoast_wpseo_opengraph-image` – OG-Bild (Phase 2)
 
-### Anthropic API
-- Endpoint: `https://api.anthropic.com/v1/messages`
-- Doku: https://docs.claude.com
-- Modell für dieses Projekt: `claude-sonnet-4-5`
+### Google Gemini API
+- SDK: `@ai-sdk/google` (Vercel AI SDK Wrapper)
+- Doku: https://ai-sdk.dev/providers/ai-sdk-providers/google-generative-ai
+- Modell für dieses Projekt: `gemini-2.5-flash`
+- API-Key-Variable (Default des Vercel AI SDK): `GOOGLE_GENERATIVE_AI_API_KEY`
 
 ---
 
