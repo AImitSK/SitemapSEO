@@ -1,4 +1,4 @@
-import { desc, eq } from "drizzle-orm";
+import { and, desc, eq, ne, sql } from "drizzle-orm";
 
 import { db } from "@/lib/db";
 import { drafts, sites, urls, type Draft, type Url } from "@/lib/db/schema";
@@ -8,6 +8,7 @@ export type UrlWithSite = {
   url: Url;
   site: PublicSite;
   recentDrafts: Draft[];
+  siblingForeignCount: number;
 };
 
 export async function getUrlWithSite(urlId: string): Promise<UrlWithSite | null> {
@@ -28,6 +29,21 @@ export async function getUrlWithSite(urlId: string): Promise<UrlWithSite | null>
     .orderBy(desc(drafts.createdAt))
     .limit(5);
 
+  let siblingForeignCount = 0;
+  if (row.translationGroupId) {
+    const [count] = await db
+      .select({ value: sql<number>`COUNT(*)::int` })
+      .from(urls)
+      .where(
+        and(
+          eq(urls.siteId, row.siteId),
+          eq(urls.translationGroupId, row.translationGroupId),
+          ne(urls.id, row.id),
+        ),
+      );
+    siblingForeignCount = Number(count?.value ?? 0);
+  }
+
   const { wpAppPassword: _omit, ...publicSite } = siteRow;
-  return { url: row, site: publicSite, recentDrafts };
+  return { url: row, site: publicSite, recentDrafts, siblingForeignCount };
 }

@@ -15,7 +15,9 @@ export default async function UrlDetailPage({ params }: Params) {
   if (!data || data.site.id !== siteId) {
     notFound();
   }
-  const { url, site, recentDrafts } = data;
+  const { url, site, recentDrafts, siblingForeignCount } = data;
+  const isPrimaryLanguage = url.language === site.primaryLanguage;
+  const latestDraft = recentDrafts[0] ?? null;
 
   return (
     <>
@@ -23,7 +25,13 @@ export default async function UrlDetailPage({ params }: Params) {
       <main className="flex-1 p-6">
         <div className="grid grid-cols-1 xl:grid-cols-[20rem_1fr] gap-6">
           <ContextColumn url={url} siteId={siteId} drafts={recentDrafts} />
-          <UrlEditor url={url} siteName={site.name} />
+          <UrlEditor
+            url={url}
+            siteName={site.name}
+            isPrimaryLanguage={isPrimaryLanguage}
+            siblingForeignCount={siblingForeignCount}
+            latestDraft={latestDraft}
+          />
         </div>
       </main>
     </>

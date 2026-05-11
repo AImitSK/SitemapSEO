@@ -5,6 +5,7 @@ import { activityLog, urls } from "@/lib/db/schema";
 import { getSiteWithSecret } from "@/lib/sites/queries";
 import { wpFetch } from "@/lib/wp/client";
 import { listSyncablePostTypes } from "@/lib/wp/post-types";
+import { decodeEntities, stripHtml } from "@/lib/wp/text";
 
 export type SyncResult = {
   fetched: number;
@@ -13,32 +14,6 @@ export type SyncResult = {
   perType: Record<string, { fetched: number; matched: number }>;
   durationMs: number;
 };
-
-const ENTITIES: Record<string, string> = {
-  "&amp;": "&",
-  "&lt;": "<",
-  "&gt;": ">",
-  "&quot;": '"',
-  "&#039;": "'",
-  "&apos;": "'",
-  "&nbsp;": " ",
-  "&ndash;": "–",
-  "&mdash;": "—",
-};
-
-function decodeEntities(s: string): string {
-  return s.replace(
-    /&(?:amp|lt|gt|quot|#039|apos|nbsp|ndash|mdash);/g,
-    (m) => ENTITIES[m] ?? m,
-  );
-}
-
-function stripHtml(s: string): string {
-  return s
-    .replace(/<[^>]+>/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
-}
 
 function asExcerpt(post: WpPost): string | null {
   const raw = post.excerpt?.rendered?.trim() ?? "";
@@ -56,6 +31,10 @@ type WpPost = {
   title?: { rendered?: string };
   excerpt?: { rendered?: string };
   meta?: Record<string, unknown>;
+  sitemapseo_translations?: {
+    trid: string;
+    siblings: Record<string, number> | Record<string, never>;
+  } | null;
 };
 
 async function fetchPostsOfTypeForLang(
@@ -70,7 +49,7 @@ async function fetchPostsOfTypeForLang(
   for (;;) {
     const res = await wpFetch(
       site,
-      `/wp/v2/${restBase}?per_page=100&page=${page}&context=edit&_fields=id,slug,link,type,title,excerpt,meta${langParam}`,
+      `/wp/v2/${restBase}?per_page=100&page=${page}&context=edit&_fields=id,slug,link,type,title,excerpt,meta,sitemapseo_translations${langParam}`,
       { timeoutMs: 60_000 },
     );
     if (res.status === 400 || res.status === 404) {
@@ -158,9 +137,18 @@ export async function syncSiteFromWp(siteId: string): Promise<SyncResult> {
     currentSeoTitle: string | null;
     currentMetaDesc: string | null;
     currentFocusKeyword: string | null;
+    currentMetaRobotsNoindex: boolean;
+    currentMetaRobotsNofollow: boolean;
+    translationGroupId: string | null;
     nextStatus: "pending" | "optimized";
   };
   const updates: Update[] = [];
+
+  function metaBool(meta: Record<string, unknown> | undefined, key: string): boolean {
+    const v = meta?.[key];
+    if (v === true || v === "1" || v === 1 || v === "true") return true;
+    return false;
+  }
 
   for (const pt of postTypes) {
     let posts: WpPost[] = [];
@@ -184,6 +172,9 @@ export async function syncSiteFromWp(siteId: string): Promise<SyncResult> {
       const seoTitle = metaString(post.meta, "_yoast_wpseo_title");
       const metaDesc = metaString(post.meta, "_yoast_wpseo_metadesc");
       const focusKw = metaString(post.meta, "_yoast_wpseo_focuskw");
+      const robotsNoindex = metaBool(post.meta, "_yoast_wpseo_meta-robots-noindex");
+      const robotsNofollow = metaBool(post.meta, "_yoast_wpseo_meta-robots-nofollow");
+      const trid = post.sitemapseo_translations?.trid ?? null;
       const nextStatus: Update["nextStatus"] =
         seoTitle && metaDesc ? "optimized" : "pending";
 
@@ -198,6 +189,9 @@ export async function syncSiteFromWp(siteId: string): Promise<SyncResult> {
         currentSeoTitle: seoTitle,
         currentMetaDesc: metaDesc,
         currentFocusKeyword: focusKw,
+        currentMetaRobotsNoindex: robotsNoindex,
+        currentMetaRobotsNofollow: robotsNofollow,
+        translationGroupId: trid,
         nextStatus,
       });
       matchedPerType += 1;
@@ -223,6 +217,9 @@ export async function syncSiteFromWp(siteId: string): Promise<SyncResult> {
             currentSeoTitle: u.currentSeoTitle,
             currentMetaDesc: u.currentMetaDesc,
             currentFocusKeyword: u.currentFocusKeyword,
+            currentMetaRobotsNoindex: u.currentMetaRobotsNoindex,
+            currentMetaRobotsNofollow: u.currentMetaRobotsNofollow,
+            translationGroupId: u.translationGroupId,
             lastSyncedAt: now,
             status: u.nextStatus,
           })

@@ -15,6 +15,7 @@ const SOURCE_LABELS: Record<Draft["source"], string> = {
   ai_generated: "KI",
   ai_edited: "KI bearbeitet",
   manual_edit: "Manuell",
+  translated: "Übersetzt",
 };
 
 export function ContextColumn({

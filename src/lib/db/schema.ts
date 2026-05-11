@@ -24,6 +24,7 @@ export const draftSource = pgEnum("draft_source", [
   "ai_generated",
   "manual_edit",
   "ai_edited",
+  "translated",
 ]);
 
 export const sites = pgTable("sites", {
@@ -60,6 +61,13 @@ export const urls = pgTable(
     currentSeoTitle: text("current_seo_title"),
     currentMetaDesc: text("current_meta_desc"),
     currentFocusKeyword: text("current_focus_keyword"),
+    currentMetaRobotsNoindex: boolean("current_meta_robots_noindex")
+      .notNull()
+      .default(false),
+    currentMetaRobotsNofollow: boolean("current_meta_robots_nofollow")
+      .notNull()
+      .default(false),
+    translationGroupId: text("translation_group_id"),
     contentExcerpt: text("content_excerpt"),
     sitemapLastmod: timestamp("sitemap_lastmod", { withTimezone: true }),
     status: urlStatus("status").default("pending").notNull(),
@@ -78,6 +86,7 @@ export const urls = pgTable(
     index("urls_site_idx").on(t.siteId),
     index("urls_site_status_idx").on(t.siteId, t.status),
     index("urls_site_language_idx").on(t.siteId, t.language),
+    index("urls_site_trid_idx").on(t.siteId, t.translationGroupId),
   ],
 );
 
@@ -124,6 +133,13 @@ export const backups = pgTable(
     seoTitle: text("seo_title"),
     metaDescription: text("meta_description"),
     focusKeyword: text("focus_keyword"),
+    longtailKeywords: text("longtail_keywords")
+      .array()
+      .notNull()
+      .default(sql`'{}'::text[]`),
+    noindex: boolean("noindex").notNull().default(false),
+    nofollow: boolean("nofollow").notNull().default(false),
+    draftIdAtPush: uuid("draft_id_at_push"),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
       .notNull(),

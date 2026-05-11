@@ -5,15 +5,19 @@ import {
   Loader2Icon,
   RefreshCwIcon,
   SaveIcon,
+  SendIcon,
   SparklesIcon,
+  Undo2Icon,
   XIcon,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 
 import { LengthCounter } from "@/components/editor/length-counter";
+import { PushDialog } from "@/components/editor/push-dialog";
+import { RollbackDialog } from "@/components/editor/rollback-dialog";
 import { SerpPreview } from "@/components/editor/serp-preview";
 import { VariableButtons } from "@/components/editor/variable-buttons";
 import { Badge } from "@/components/ui/badge";
@@ -62,6 +66,9 @@ type FormValues = {
 type Props = {
   url: Url;
   siteName: string;
+  isPrimaryLanguage: boolean;
+  siblingForeignCount: number;
+  latestDraft: Draft | null;
 };
 
 function draftToSuggestion(d: Draft): Suggestion {
@@ -77,34 +84,46 @@ function draftToSuggestion(d: Draft): Suggestion {
   };
 }
 
-export function UrlEditor({ url, siteName }: Props) {
+export function UrlEditor({
+  url,
+  siteName,
+  isPrimaryLanguage,
+  siblingForeignCount,
+  latestDraft,
+}: Props) {
   const router = useRouter();
   const titleRef = useRef<HTMLInputElement>(null);
+  const canTranslate = isPrimaryLanguage && siblingForeignCount > 0;
 
   const form = useForm<FormValues>({
     defaultValues: {
-      seoTitle: url.currentSeoTitle ?? "",
-      metaDescription: url.currentMetaDesc ?? "",
-      focusKeyword: url.currentFocusKeyword ?? "",
-      longtailKeywordsCsv: "",
-      noindex: false,
-      nofollow: false,
+      seoTitle: latestDraft?.seoTitle ?? url.currentSeoTitle ?? "",
+      metaDescription:
+        latestDraft?.metaDescription ?? url.currentMetaDesc ?? "",
+      focusKeyword: latestDraft?.focusKeyword ?? url.currentFocusKeyword ?? "",
+      longtailKeywordsCsv: latestDraft?.longtailKeywords?.join(", ") ?? "",
+      noindex: latestDraft?.noindex ?? url.currentMetaRobotsNoindex,
+      nofollow: latestDraft?.nofollow ?? url.currentMetaRobotsNofollow,
     },
   });
 
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [loadingGen, setLoadingGen] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [fromDraftId, setFromDraftId] = useState<string | null>(null);
+  const [fromDraftId, setFromDraftId] = useState<string | null>(
+    latestDraft?.source === "ai_generated" || latestDraft?.source === "ai_edited"
+      ? (latestDraft.parentDraftId ?? null)
+      : null,
+  );
   const [refineDialogOpen, setRefineDialogOpen] = useState(false);
   const [refinementHint, setRefinementHint] = useState("");
+  const [saveDialogOpen, setSaveDialogOpen] = useState(false);
+  const [applyTranslations, setApplyTranslations] = useState(false);
+  const [pushDialogOpen, setPushDialogOpen] = useState(false);
+  const [rollbackDialogOpen, setRollbackDialogOpen] = useState(false);
 
   const seoTitle = form.watch("seoTitle");
   const metaDescription = form.watch("metaDescription");
-
-  useEffect(() => {
-    // re-run effect not needed; live values come from form.watch
-  }, []);
 
   async function generate(opts?: { hint?: string }) {
     setLoadingGen(true);
@@ -144,7 +163,16 @@ export function UrlEditor({ url, siteName }: Props) {
     toast.message("Vorschlag in Werte übernommen — anpassen und speichern.");
   }
 
-  async function onSubmit(values: FormValues) {
+  function onSubmit(values: FormValues) {
+    // Wenn Übersetzung möglich → erst Dialog für Bestätigung + Auswahl
+    if (canTranslate) {
+      setSaveDialogOpen(true);
+      return;
+    }
+    void saveDraft(values, false);
+  }
+
+  async function saveDraft(values: FormValues, translate: boolean) {
     setSaving(true);
     try {
       const longtailKeywords = values.longtailKeywordsCsv
@@ -163,6 +191,7 @@ export function UrlEditor({ url, siteName }: Props) {
           noindex: values.noindex,
           nofollow: values.nofollow,
           fromDraftId: fromDraftId ?? undefined,
+          applyTranslations: translate,
         }),
       });
       const data = await res.json();
@@ -170,7 +199,22 @@ export function UrlEditor({ url, siteName }: Props) {
         toast.error(data.error ?? `Fehler ${res.status}`);
         return;
       }
-      toast.success("Draft gespeichert");
+      const tCount = data.translations?.length ?? 0;
+      const tErr = data.translationErrors?.length ?? 0;
+      if (translate && tCount > 0) {
+        toast.success(`Draft + ${tCount} Übersetzungen gespeichert`, {
+          description:
+            tErr > 0 ? `${tErr} Übersetzung(en) fehlgeschlagen` : undefined,
+        });
+      } else if (translate && tErr > 0) {
+        toast.warning(
+          `Draft gespeichert, aber alle ${tErr} Übersetzungen fehlgeschlagen`,
+        );
+      } else {
+        toast.success("Draft gespeichert");
+      }
+      setSaveDialogOpen(false);
+      setApplyTranslations(false);
       router.refresh();
     } catch (err) {
       toast.error(`Netzwerkfehler: ${(err as Error).message}`);
@@ -321,6 +365,33 @@ export function UrlEditor({ url, siteName }: Props) {
               </div>
             </div>
           </form>
+
+          {latestDraft ? (
+            <div className="flex flex-wrap items-center gap-2 pt-3 border-t">
+              <Button
+                type="button"
+                size="sm"
+                onClick={() => setPushDialogOpen(true)}
+              >
+                <SendIcon className="size-3.5" />
+                Pushen zu WordPress
+              </Button>
+              {url.status === "pushed" ? (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setRollbackDialogOpen(true)}
+                >
+                  <Undo2Icon className="size-3.5" />
+                  Rollback
+                </Button>
+              ) : null}
+              <span className="text-xs text-muted-foreground">
+                Letzter Draft: {new Date(latestDraft.createdAt).toLocaleString("de-DE")}
+              </span>
+            </div>
+          ) : null}
         </CardContent>
       </Card>
 
@@ -377,6 +448,74 @@ export function UrlEditor({ url, siteName }: Props) {
           ))}
         </CardContent>
       </Card>
+
+      <Dialog open={saveDialogOpen} onOpenChange={setSaveDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Draft speichern</DialogTitle>
+            <DialogDescription>
+              Du bearbeitest die Primärsprache ({url.language?.toUpperCase()}).
+              Optional kannst du den gleichen Draft automatisch in die {siblingForeignCount} verknüpften Fremdsprachen übersetzen lassen.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex items-start gap-3 rounded-md border p-3">
+            <Switch
+              checked={applyTranslations}
+              onCheckedChange={setApplyTranslations}
+              disabled={saving}
+            />
+            <div className="grid gap-0.5">
+              <Label className="text-sm font-medium">
+                Auch in {siblingForeignCount} Fremdsprache(n) übersetzen
+              </Label>
+              <span className="text-xs text-muted-foreground">
+                Erzeugt pro Sprache einen Draft via Gemini-Übersetzung. Du
+                kannst sie später einzeln öffnen, anpassen oder pushen.
+              </span>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="ghost"
+              onClick={() => setSaveDialogOpen(false)}
+              disabled={saving}
+            >
+              Abbrechen
+            </Button>
+            <Button
+              onClick={() => saveDraft(form.getValues(), applyTranslations)}
+              disabled={saving}
+            >
+              {saving ? (
+                <Loader2Icon className="size-4 animate-spin" />
+              ) : (
+                <SaveIcon className="size-4" />
+              )}
+              Speichern
+              {applyTranslations
+                ? ` + ${siblingForeignCount} übersetzen`
+                : ""}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {latestDraft ? (
+        <PushDialog
+          open={pushDialogOpen}
+          onOpenChange={setPushDialogOpen}
+          url={url}
+          draft={latestDraft}
+          onSuccess={() => router.refresh()}
+        />
+      ) : null}
+
+      <RollbackDialog
+        open={rollbackDialogOpen}
+        onOpenChange={setRollbackDialogOpen}
+        urlId={url.id}
+        onSuccess={() => router.refresh()}
+      />
 
       <Dialog open={refineDialogOpen} onOpenChange={setRefineDialogOpen}>
         <DialogContent>

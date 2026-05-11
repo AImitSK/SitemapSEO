@@ -1,5 +1,6 @@
 import { DownloadIcon } from "lucide-react";
 
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -8,16 +9,24 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { MU_PLUGIN_VERSION } from "@/lib/wp/mu-plugin-source";
 
 export function MuPluginDownloadCard() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>WordPress mu-Plugin</CardTitle>
+        <CardTitle className="flex items-center gap-2">
+          WordPress mu-Plugin
+          <Badge variant="secondary" className="font-mono text-[10px]">
+            v{MU_PLUGIN_VERSION}
+          </Badge>
+        </CardTitle>
         <CardDescription>
-          Stellt die Yoast-Felder über die REST-API zur Verfügung. Ohne
-          Plugin kann SitemapSEO die SEO-Felder nicht lesen oder zurück­
-          schreiben.
+          Stellt Yoast-Felder, Robots-Meta und WPML-Übersetzungspaare über die
+          REST-API zur Verfügung. <strong>Bei Update auf v2</strong>: alte Datei
+          unter <code className="rounded bg-muted px-1">/wp-content/mu-plugins/</code>{" "}
+          ersetzen und anschließend „Mit WordPress synchronisieren" erneut
+          klicken, um Translation-IDs einzulesen.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
