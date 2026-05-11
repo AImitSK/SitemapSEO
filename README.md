@@ -2,7 +2,7 @@
 
 Webbasiertes Tool zur SEO-Optimierung von WordPress-Websites mit Yoast SEO. Liest Sitemaps ein, synchronisiert Yoast-Felder über die WordPress REST API, generiert KI-gestützte Vorschläge für SEO-Titel und Meta-Descriptions, ermöglicht manuelle Überarbeitung und schreibt finale Werte – mit automatischem Backup – zurück nach WordPress.
 
-> **Status:** Pre-Implementation. Aktuell enthält das Repo nur Spezifikation und Projekt-Doku. Der Code wird gemäß Sprint-Plan in [`docs/SITEMAPSEO_SPEC.md`](docs/SITEMAPSEO_SPEC.md) aufgebaut.
+> **Status:** Sprint 1 (Foundation) abgeschlossen. Auth-Gate (Basic Auth), Drizzle-Schema, Sites-CRUD, WP-Verbindungstest und mu-Plugin-Download sind implementiert. Sprint 2 (Sitemap-Import + WP-Sync) folgt.
 
 ---
 
@@ -25,31 +25,59 @@ Webbasiertes Tool zur SEO-Optimierung von WordPress-Websites mit Yoast SEO. Lies
 - [`docs/SITEMAPSEO_SPEC.md`](docs/SITEMAPSEO_SPEC.md) — Vollständige Produkt-Spec (Architektur, Datenbank-Schema, API-Routen, UI-Aufbau, Sprint-Plan, WordPress-mu-Plugin)
 - [`CLAUDE.md`](CLAUDE.md) — Hinweise für KI-gestützte Entwicklung (Claude Code)
 
-## Setup (sobald gescaffoldet)
+## Setup
 
 ```bash
 npm install
-cp .env.example .env.local   # Variablen befüllen, siehe Spec
-npm run db:push              # Drizzle-Schema in DB pushen
-npm run dev
+vercel env pull .env.local   # synct Neon + Gemini + ENCRYPTION_KEY aus Vercel
+npm run db:push              # Drizzle-Schema in Neon pushen
+npm run dev                  # http://localhost:3000 (Basic Auth)
 ```
 
-Erforderliche Environment-Variablen (Details in der Spec):
+### Admin-Passwort setzen
+
+`ADMIN_PASSWORD_HASH` ist (bewusst) nicht in den Vercel-Environments. Vor dem ersten Login generieren:
+
+```bash
+npx tsx scripts/hash-password.ts "<dein-passwort>"
+# Hash in .env.local eintragen
+# und in Vercel für alle 3 Environments:
+vercel env add ADMIN_PASSWORD_HASH production
+vercel env add ADMIN_PASSWORD_HASH preview
+vercel env add ADMIN_PASSWORD_HASH development
+```
+
+### Verfügbare Scripts
+
+```bash
+npm run dev          # Turbopack dev server
+npm run build        # Production-Build
+npm run start        # Production-Server
+npm run typecheck    # tsc --noEmit
+npm run lint         # ESLint
+npm run db:push      # Drizzle-Schema direkt nach Neon
+npm run db:generate  # Migrations generieren
+npm run db:studio    # Drizzle Studio
+```
+
+### Erforderliche Environment-Variablen
+
+Aus Vercel via `vercel env pull` (bereits provisioniert):
 
 ```env
-DATABASE_URL=postgres://...
-GOOGLE_GENERATIVE_AI_API_KEY=AIza...
-ENCRYPTION_KEY=<32-byte-base64>     # AES-256-GCM für WP-App-Passwords
-ADMIN_USERNAME=...
-ADMIN_PASSWORD_HASH=<bcrypt>
+DATABASE_URL=postgres://...           # Neon (pooled)
+DATABASE_URL_UNPOOLED=postgres://...
+GOOGLE_GENERATIVE_AI_API_KEY=AIza...  # Vercel AI SDK
+ENCRYPTION_KEY=<32-byte-base64>       # AES-256-GCM für WP-App-Passwords
+ADMIN_USERNAME=stefan
+ADMIN_PASSWORD_HASH=<bcrypt>          # manuell, s. oben
 ```
 
 ## Deployment
 
 ```bash
-vercel link
-vercel env pull
-vercel deploy
+vercel deploy           # Preview
+vercel deploy --prod    # Production
 ```
 
 ## Lizenz
