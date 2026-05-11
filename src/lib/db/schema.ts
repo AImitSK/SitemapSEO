@@ -7,6 +7,7 @@ import {
   pgTable,
   text,
   timestamp,
+  uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
 
@@ -72,6 +73,7 @@ export const urls = pgTable(
       .$onUpdate(() => new Date()),
   },
   (t) => [
+    uniqueIndex("urls_site_url_uniq").on(t.siteId, t.url),
     index("urls_site_idx").on(t.siteId),
     index("urls_site_status_idx").on(t.siteId, t.status),
     index("urls_site_language_idx").on(t.siteId, t.language),

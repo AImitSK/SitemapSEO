@@ -1,8 +1,9 @@
-import { SettingsIcon } from "lucide-react";
+import { SettingsIcon, TableIcon } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { AppHeader } from "@/components/layout/app-header";
+import { SiteSyncActions } from "@/components/sites/site-sync-actions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -13,6 +14,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { getSite } from "@/lib/sites/queries";
+import { getSiteUrlStats } from "@/lib/urls/queries";
 
 export const dynamic = "force-dynamic";
 
@@ -25,38 +27,35 @@ export default async function SiteDashboardPage({ params }: Props) {
     notFound();
   }
 
+  const stats = await getSiteUrlStats(id);
+
   return (
     <>
       <AppHeader title={site.name} subtitle={site.baseUrl} />
       <main className="flex-1 p-6 grid gap-6">
-        <div className="grid gap-4 grid-cols-1 md:grid-cols-3">
-          <Card>
-            <CardHeader>
-              <CardDescription>URLs in Datenbank</CardDescription>
-              <CardTitle className="text-2xl tabular-nums">0</CardTitle>
-            </CardHeader>
-            <CardContent className="text-xs text-muted-foreground">
-              Sitemap-Import folgt in Sprint 2.
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader>
-              <CardDescription>Mit Yoast synchronisiert</CardDescription>
-              <CardTitle className="text-2xl tabular-nums">0</CardTitle>
-            </CardHeader>
-            <CardContent className="text-xs text-muted-foreground">
-              WP-Sync folgt in Sprint 2.
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader>
-              <CardDescription>Gepusht zu WordPress</CardDescription>
-              <CardTitle className="text-2xl tabular-nums">0</CardTitle>
-            </CardHeader>
-            <CardContent className="text-xs text-muted-foreground">
-              Push folgt in Sprint 4.
-            </CardContent>
-          </Card>
+        <SiteSyncActions siteId={site.id} />
+
+        <div className="grid gap-4 grid-cols-1 md:grid-cols-4">
+          <StatCard
+            label="URLs in Datenbank"
+            value={stats.total}
+            hint="Aus der Sitemap importiert"
+          />
+          <StatCard
+            label="Mit WordPress gemappt"
+            value={stats.synced}
+            hint="wp_post_id gesetzt"
+          />
+          <StatCard
+            label="Optimiert"
+            value={stats.optimized}
+            hint="SEO-Titel + Meta-Desc vorhanden"
+          />
+          <StatCard
+            label="Gepusht zu WordPress"
+            value={stats.pushed}
+            hint="Folgt in Sprint 4"
+          />
         </div>
 
         <Card>
@@ -110,6 +109,14 @@ export default async function SiteDashboardPage({ params }: Props) {
           <Button
             variant="outline"
             nativeButton={false}
+            render={<Link href={`/sites/${site.id}/urls`} />}
+          >
+            <TableIcon className="size-4" />
+            URLs ansehen
+          </Button>
+          <Button
+            variant="outline"
+            nativeButton={false}
             render={<Link href={`/sites/${site.id}/settings`} />}
           >
             <SettingsIcon className="size-4" />
@@ -118,6 +125,28 @@ export default async function SiteDashboardPage({ params }: Props) {
         </div>
       </main>
     </>
+  );
+}
+
+function StatCard({
+  label,
+  value,
+  hint,
+}: {
+  label: string;
+  value: number;
+  hint: string;
+}) {
+  return (
+    <Card>
+      <CardHeader>
+        <CardDescription>{label}</CardDescription>
+        <CardTitle className="text-2xl tabular-nums">
+          {value.toLocaleString("de-DE")}
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="text-xs text-muted-foreground">{hint}</CardContent>
+    </Card>
   );
 }
 

@@ -1,6 +1,13 @@
 "use client";
 
-import { GlobeIcon, ListIcon, PlusIcon, SettingsIcon } from "lucide-react";
+import {
+  GlobeIcon,
+  LayoutDashboardIcon,
+  ListIcon,
+  PlusIcon,
+  SettingsIcon,
+  TableIcon,
+} from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
@@ -75,19 +82,39 @@ export function AppSidebar({ sites }: AppSidebarProps) {
               <SidebarMenu>
                 {sites.map((site) => {
                   const base = `/sites/${site.id}`;
-                  const dashboardActive =
-                    pathname === base || pathname?.startsWith(`${base}/`) === true
-                      ? !pathname?.endsWith("/settings")
-                      : false;
+                  const dashboardActive = pathname === base;
+                  const urlsActive =
+                    pathname === `${base}/urls` ||
+                    pathname?.startsWith(`${base}/urls/`) === true;
                   const settingsActive = pathname === `${base}/settings`;
                   return (
                     <SidebarMenuItem key={site.id}>
                       <SidebarMenuButton
-                        isActive={dashboardActive}
+                        isActive={
+                          dashboardActive || urlsActive || settingsActive
+                        }
                         render={<Link href={base} />}
                       >
                         <GlobeIcon />
                         <span className="truncate">{site.name}</span>
+                      </SidebarMenuButton>
+                      <SidebarMenuButton
+                        isActive={dashboardActive}
+                        size="sm"
+                        className="pl-8"
+                        render={<Link href={base} />}
+                      >
+                        <LayoutDashboardIcon />
+                        <span>Dashboard</span>
+                      </SidebarMenuButton>
+                      <SidebarMenuButton
+                        isActive={urlsActive}
+                        size="sm"
+                        className="pl-8"
+                        render={<Link href={`${base}/urls`} />}
+                      >
+                        <TableIcon />
+                        <span>URLs</span>
                       </SidebarMenuButton>
                       <SidebarMenuButton
                         isActive={settingsActive}
@@ -108,7 +135,7 @@ export function AppSidebar({ sites }: AppSidebarProps) {
       </SidebarContent>
       <SidebarFooter>
         <div className="px-2 py-1.5 text-xs text-muted-foreground">
-          v0.1 · Sprint 1
+          v0.2 · Sprint 2
         </div>
       </SidebarFooter>
     </Sidebar>
