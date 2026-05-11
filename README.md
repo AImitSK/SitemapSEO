@@ -40,12 +40,25 @@ npm run dev                  # http://localhost:3000 (Basic Auth)
 
 ```bash
 npx tsx scripts/hash-password.ts "<dein-passwort>"
-# Hash in .env.local eintragen
-# und in Vercel für alle 3 Environments:
+```
+
+Den ausgegebenen bcrypt-Hash an zwei Stellen eintragen:
+
+**Vercel** (alle 3 Environments — der Hash kommt 1:1 im Function-Env an):
+
+```bash
 vercel env add ADMIN_PASSWORD_HASH production
 vercel env add ADMIN_PASSWORD_HASH preview
 vercel env add ADMIN_PASSWORD_HASH development
 ```
+
+**Lokal** in `.env.local` — **jedes `$` mit Backslash escapen**, sonst expandiert `@next/env` `$2b`/`$12`/etc. als nicht existierende Variablen weg:
+
+```env
+ADMIN_PASSWORD_HASH="\$2b\$12\$qB5BxHn5hk4/fKr1Y/..."
+```
+
+Achtung: `vercel env pull` überschreibt `.env.local` ohne Escapes — danach das `\$`-Escaping wieder per Hand reinsetzen.
 
 ### Verfügbare Scripts
 
