@@ -24,7 +24,7 @@ export function SitesList({ sites }: { sites: PublicSite[] }) {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <Button render={<Link href="/sites/new" />}>
+          <Button nativeButton={false} render={<Link href="/sites/new" />}>
             <PlusIcon className="size-4" />
             Erste Site anlegen
           </Button>
@@ -65,6 +65,7 @@ export function SitesList({ sites }: { sites: PublicSite[] }) {
             <Button
               variant="ghost"
               size="sm"
+              nativeButton={false}
               render={<Link href={`/sites/${site.id}`} />}
             >
               Öffnen

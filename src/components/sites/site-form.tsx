@@ -168,7 +168,11 @@ export function SiteForm({ mode, siteId, defaults }: SiteFormProps) {
 
       <div className="grid gap-4 grid-cols-2">
         <Field label="WP-Benutzer" error={errors.wpUsername?.message}>
-          <Input placeholder="seo-bot" {...register("wpUsername")} />
+          <Input
+            placeholder="seo-bot"
+            autoComplete="username"
+            {...register("wpUsername")}
+          />
         </Field>
         <Field
           label={

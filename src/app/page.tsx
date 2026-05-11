@@ -22,7 +22,7 @@ export default async function HomePage() {
             Übersicht aller konfigurierten WordPress-Sites.
           </p>
           {sites.length > 0 ? (
-            <Button render={<Link href="/sites/new" />}>
+            <Button nativeButton={false} render={<Link href="/sites/new" />}>
               <PlusIcon className="size-4" />
               Neue Site
             </Button>

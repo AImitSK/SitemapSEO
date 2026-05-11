@@ -109,6 +109,7 @@ export default async function SiteDashboardPage({ params }: Props) {
         <div className="flex gap-2">
           <Button
             variant="outline"
+            nativeButton={false}
             render={<Link href={`/sites/${site.id}/settings`} />}
           >
             <SettingsIcon className="size-4" />

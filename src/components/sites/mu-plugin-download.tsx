@@ -35,7 +35,11 @@ export function MuPluginDownloadCard() {
           </li>
           <li>Verbindungstest erneut ausführen.</li>
         </ol>
-        <Button variant="outline" render={<a href="/api/mu-plugin" />}>
+        <Button
+          variant="outline"
+          nativeButton={false}
+          render={<a href="/api/mu-plugin" />}
+        >
           <DownloadIcon className="size-4" />
           sitemapseo-rest-api.php herunterladen
         </Button>
