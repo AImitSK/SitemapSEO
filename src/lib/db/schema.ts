@@ -1,5 +1,6 @@
 import { sql } from "drizzle-orm";
 import {
+  boolean,
   index,
   integer,
   jsonb,
@@ -90,9 +91,18 @@ export const drafts = pgTable(
     seoTitle: text("seo_title"),
     metaDescription: text("meta_description"),
     focusKeyword: text("focus_keyword"),
+    longtailKeywords: text("longtail_keywords")
+      .array()
+      .notNull()
+      .default(sql`'{}'::text[]`),
+    noindex: boolean("noindex").notNull().default(false),
+    nofollow: boolean("nofollow").notNull().default(false),
     source: draftSource("source").notNull(),
     aiModel: text("ai_model"),
     aiPromptUsed: text("ai_prompt_used"),
+    refinementHint: text("refinement_hint"),
+    parentDraftId: uuid("parent_draft_id"),
+    reasoning: text("reasoning"),
     createdBy: text("created_by"),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()

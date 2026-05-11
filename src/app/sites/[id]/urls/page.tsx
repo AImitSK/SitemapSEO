@@ -77,7 +77,7 @@ export default async function UrlsPage({ params, searchParams }: Params) {
             q: sp.q,
           }}
         />
-        <UrlTable rows={result.rows} />
+        <UrlTable rows={result.rows} siteId={id} />
         <UrlPagination
           siteId={id}
           page={result.page}

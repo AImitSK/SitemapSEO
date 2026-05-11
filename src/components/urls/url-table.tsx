@@ -1,8 +1,10 @@
-import { ExternalLinkIcon } from "lucide-react";
+import { ExternalLinkIcon, PencilIcon } from "lucide-react";
+import Link from "next/link";
 
 import { LengthPill } from "@/components/urls/length-pill";
 import { StatusBadge } from "@/components/urls/status-badge";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Table,
   TableBody,
@@ -15,9 +17,10 @@ import type { Url } from "@/lib/db/schema";
 
 type Props = {
   rows: Url[];
+  siteId: string;
 };
 
-export function UrlTable({ rows }: Props) {
+export function UrlTable({ rows, siteId }: Props) {
   if (rows.length === 0) {
     return (
       <div className="rounded-lg border border-dashed py-12 text-center text-sm text-muted-foreground">
@@ -38,7 +41,7 @@ export function UrlTable({ rows }: Props) {
             <TableHead className="w-[6rem]">Meta-D.</TableHead>
             <TableHead className="w-[10rem]">Focus-KW</TableHead>
             <TableHead className="w-[7rem]">Status</TableHead>
-            <TableHead className="w-[3rem]"></TableHead>
+            <TableHead className="w-[7rem]">Aktion</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -83,15 +86,26 @@ export function UrlTable({ rows }: Props) {
                 <StatusBadge status={r.status} />
               </TableCell>
               <TableCell>
-                <a
-                  href={r.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-muted-foreground hover:text-foreground"
-                  title="Live-Seite öffnen"
-                >
-                  <ExternalLinkIcon className="size-3.5" />
-                </a>
+                <div className="flex items-center gap-1">
+                  <Button
+                    size="xs"
+                    variant="ghost"
+                    nativeButton={false}
+                    render={<Link href={`/sites/${siteId}/urls/${r.id}`} />}
+                  >
+                    <PencilIcon className="size-3" />
+                    Bearbeiten
+                  </Button>
+                  <a
+                    href={r.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-muted-foreground hover:text-foreground"
+                    title="Live-Seite öffnen"
+                  >
+                    <ExternalLinkIcon className="size-3.5" />
+                  </a>
+                </div>
               </TableCell>
             </TableRow>
           ))}
